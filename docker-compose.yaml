@@ -1,0 +1,110 @@
+version: '3.3'
+
+services:
+  mysql:
+    image: mysql:5.7
+    volumes:
+       - ${DOCKER_ROOT}/kurniawan.tech/mysql:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: HellOX2
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+
+  wordpress:
+    depends_on:
+      - mysql
+    image: wordpress:5.5.0-php7.4-fpm-alpine
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/wordpress:/var/www/html
+
+  nginx:
+    depends_on:
+      - wordpress
+    image: nginx:1.18.0-alpine
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/nginx:/etc/nginx
+      - ${DOCKER_ROOT}/kurniawan.tech/wordpress:/var/www/html/wordpress
+      - ${DOCKER_ROOT}/kurniawan.tech/transmission/downloads:/var/www/html/transmission
+      - ${DOCKER_ROOT}/kurniawan.tech/transmission/heaven:/var/www/html/heaven
+
+  transmission:
+    image: linuxserver/transmission:3.00-r0-ls63
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Jakarta
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/transmission/config:/config
+      - ${DOCKER_ROOT}/kurniawan.tech/transmission/downloads:/downloads
+      - ${DOCKER_ROOT}/kurniawan.tech/transmission/heaven:/heaven
+      - ${DOCKER_ROOT}/drive/mount/Videos/transmission:/downloads/complete/transmission
+    ports:
+      - 51413:51413
+      - 51413:51413/udp
+    restart: always
+
+  sonarr:
+    image: linuxserver/sonarr:version-3.0.4.986
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/sonarr/config:/config
+      - ${DOCKER_ROOT}/drive/mount/Videos/TVs:/TVs
+      - ${DOCKER_ROOT}/drive/mount/Videos/transmission:/downloads/complete/transmission
+    environment:
+      PUID: ${DOCKER_PUID}
+      PGID: ${DOCKER_PGID}
+    restart: always
+
+  radarr:
+    image: linuxserver/radarr:version-3.0.0.3966
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/radarr/config:/config
+      - ${DOCKER_ROOT}/drive/mount/Videos/Movies:/Movies
+      - ${DOCKER_ROOT}/drive/mount/Videos/transmission:/downloads/complete/transmission
+    environment:
+      PUID: ${DOCKER_PUID}
+      PGID: ${DOCKER_PGID}
+    restart: always
+
+  jackett:
+    image: linuxserver/jackett:v0.16.1842-ls18
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/jackett/config:/config
+      - ${DOCKER_ROOT}/kurniawan.tech/jackett/downloads:/downloads
+    environment:
+      PUID: ${DOCKER_PUID}
+      PGID: ${DOCKER_PGID}
+    restart: always
+
+  bazarr:
+    image: linuxserver/bazarr:version-v0.9.0.5
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/bazarr/config:/config
+      - ${DOCKER_ROOT}/drive/mount/Videos/Movies:/Movies
+      - ${DOCKER_ROOT}/drive/mount/Videos/TVs:/TVs
+    environment:
+      PUID: ${DOCKER_PUID}
+      PGID: ${DOCKER_PGID}
+    restart: always
+
+  emby:
+    environment:
+        GID: ${DOCKER_PGID}
+        UID: ${DOCKER_PUID}
+        DOCKER_TIMEZONE: Asia/Jakarta
+    image: emby/embyserver:4.5.2.0
+    volumes:
+      - ${DOCKER_ROOT}/kurniawan.tech/emby/config:/config
+      - ${DOCKER_ROOT}/drive/mount/Videos:/mnt/share1
+    restart: always
